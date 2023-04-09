@@ -13,8 +13,7 @@
 use core::ops::{Add, Div, Mul, Neg, Sub};
 use core::time::Duration as StdDuration;
 use core::{fmt, i64};
-#[cfg(any(feature = "std", test))]
-use std::error::Error;
+use crate::Error;
 
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize, Serialize};
@@ -49,6 +48,10 @@ macro_rules! try_opt {
 
 /// ISO 8601 time duration with nanosecond precision.
 ///
+/// The `std::time::Duration` supports a range from zero to `u64::MAX`
+/// *seconds*, while this module supports signed range of up to
+/// `i64::MAX` of *milliseconds*.
+/// 
 /// This also allows for the negative duration; see individual methods for details.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 #[cfg_attr(feature = "rkyv", derive(Archive, Deserialize, Serialize))]
@@ -284,15 +287,15 @@ impl TimeDelta {
     ///
     /// This function errors when original duration is larger than the maximum
     /// value supported for this type.
-    pub fn from_std(duration: StdDuration) -> Result<TimeDelta, OutOfRangeError> {
+    pub fn from_std(duration: StdDuration) -> Result<TimeDelta, Error> {
         // We need to check secs as u64 before coercing to i64
         if duration.as_secs() > MAX.secs as u64 {
-            return Err(OutOfRangeError(()));
+            return Err(Error::OutOfRangeError);
         }
         let d =
             TimeDelta { secs: duration.as_secs() as i64, nanos: duration.subsec_nanos() as i32 };
         if d > MAX {
-            return Err(OutOfRangeError(()));
+            return Err(Error::OutOfRangeError);
         }
         Ok(d)
     }
@@ -301,9 +304,9 @@ impl TimeDelta {
     ///
     /// This function errors when duration is less than zero. As standard
     /// library implementation is limited to non-negative values.
-    pub fn to_std(&self) -> Result<StdDuration, OutOfRangeError> {
+    pub fn to_std(&self) -> Result<StdDuration, Error> {
         if self.secs < 0 {
-            return Err(OutOfRangeError(()));
+            return Err(Error::OutOfRangeError);
         }
         Ok(StdDuration::new(self.secs as u64, self.nanos as u32))
     }
@@ -432,30 +435,6 @@ impl fmt::Display for TimeDelta {
     }
 }
 
-/// Represents error when converting `Duration` to/from a standard library
-/// implementation
-///
-/// The `std::time::Duration` supports a range from zero to `u64::MAX`
-/// *seconds*, while this module supports signed range of up to
-/// `i64::MAX` of *milliseconds*.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct OutOfRangeError(());
-
-impl fmt::Display for OutOfRangeError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Source duration value is out of range for the target type")
-    }
-}
-
-#[cfg(any(feature = "std", test))]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
-impl Error for OutOfRangeError {
-    #[allow(deprecated)]
-    fn description(&self) -> &str {
-        "out of range error"
-    }
-}
-
 // Copied from libnum
 #[inline]
 const fn div_mod_floor_64(this: i64, other: i64) -> (i64, i64) {
@@ -503,7 +482,9 @@ impl arbitrary::Arbitrary<'_> for TimeDelta {
 
 #[cfg(test)]
 mod tests {
-    use super::{OutOfRangeError, TimeDelta, MAX, MIN};
+    use crate::Error;
+
+    use super::{TimeDelta, MAX, MIN};
     use std::time::Duration as StdDuration;
     use std::{i32, i64};
 
@@ -743,8 +724,8 @@ mod tests {
         assert_eq!(TimeDelta::milliseconds(123765).to_std(), Ok(StdDuration::new(123, 765000000)));
         assert_eq!(TimeDelta::nanoseconds(777).to_std(), Ok(StdDuration::new(0, 777)));
         assert_eq!(MAX.to_std(), Ok(StdDuration::new(9223372036854775, 807000000)));
-        assert_eq!(TimeDelta::seconds(-1).to_std(), Err(OutOfRangeError(())));
-        assert_eq!(TimeDelta::milliseconds(-1).to_std(), Err(OutOfRangeError(())));
+        assert_eq!(TimeDelta::seconds(-1).to_std(), Err(Error::OutOfRangeError));
+        assert_eq!(TimeDelta::milliseconds(-1).to_std(), Err(Error::OutOfRangeError));
     }
 
     #[test]
@@ -763,11 +744,11 @@ mod tests {
         assert_eq!(Ok(MAX), TimeDelta::from_std(StdDuration::new(9223372036854775, 807000000)));
         assert_eq!(
             TimeDelta::from_std(StdDuration::new(9223372036854776, 0)),
-            Err(OutOfRangeError(()))
+            Err(Error::OutOfRangeError)
         );
         assert_eq!(
             TimeDelta::from_std(StdDuration::new(9223372036854775, 807000001)),
-            Err(OutOfRangeError(()))
+            Err(Error::OutOfRangeError)
         );
     }
 }

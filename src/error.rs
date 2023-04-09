@@ -132,6 +132,10 @@ pub enum Error {
 
     /// Error when serialization fails.
     SerializationError,
+
+    /// Represents error when converting `Duration` to/from a standard library
+    /// implementation
+    OutOfRangeError,
 }
 
 impl fmt::Display for Error {
@@ -190,6 +194,8 @@ impl fmt::Display for Error {
             Error::TimestampExceedsLimit => write!(f, "timestamp exceeds num_nanoseconds limit"),
 
             Error::SerializationError => write!(f, "date could not be serialized"),
+
+            Error::OutOfRangeError => write!(f, "Source duration value is out of range for the target type"),
         }
     }
 }
