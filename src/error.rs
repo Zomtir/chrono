@@ -76,3 +76,6 @@ impl fmt::Display for Error {
 
 #[cfg(feature = "std")]
 impl std::error::Error for Error {}
+
+pub(crate) const INVALID: Error = Error::InvalidParameter;
+pub(crate) const DOES_NOT_EXIST: Error = Error::DoesNotExist;
