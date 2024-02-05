@@ -780,7 +780,7 @@ impl NaiveDate {
     ///
     /// Returns [`Error::InvalidParameter`] on invalid hour, minute, second and/or millisecond.
     ///
-    /// Returns [`Error::DoesNotExist`] if the millisecond part to represent a leap second is not on
+    /// Returns [`Error::InvalidDate`] if the millisecond part to represent a leap second is not on
     /// a minute boundary.
     ///
     /// # Example
@@ -817,7 +817,7 @@ impl NaiveDate {
     ///
     /// Returns [`Error::InvalidParameter`] on invalid hour, minute, second and/or microsecond.
     ///
-    /// Returns [`Error::DoesNotExist`] if the microsecond part to represent a leap second is not on
+    /// Returns [`Error::InvalidDate`] if the microsecond part to represent a leap second is not on
     /// a minute boundary.
     ///
     /// # Example
@@ -854,7 +854,7 @@ impl NaiveDate {
     ///
     /// Returns [`Error::InvalidParameter`] on invalid hour, minute, second and/or nanosecond.
     ///
-    /// Returns [`Error::DoesNotExist`] if the nanosecond part to represent a leap second is not on
+    /// Returns [`Error::InvalidDate`] if the nanosecond part to represent a leap second is not on
     /// a minute boundary.
     ///
     /// # Example

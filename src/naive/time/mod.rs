@@ -12,7 +12,7 @@ use core::{fmt, str};
 #[cfg(any(feature = "rkyv", feature = "rkyv-16", feature = "rkyv-32", feature = "rkyv-64"))]
 use rkyv::{Archive, Deserialize, Serialize};
 
-use crate::error::{Error, DOES_NOT_EXIST, INVALID};
+use crate::error::{Error, INVALID_PARAM, INVALID_DATE};
 use crate::expect;
 #[cfg(feature = "alloc")]
 use crate::format::DelayedFormat;
@@ -265,7 +265,7 @@ impl NaiveTime {
     ///
     /// Returns [`Error::InvalidParameter`] on invalid hour, minute, second and/or millisecond.
     ///
-    /// Returns [`Error::DoesNotExist`] if the millisecond part to represent a leap second is not on
+    /// Returns [`Error::InvalidDate`] if the millisecond part to represent a leap second is not on
     /// a minute boundary.
     ///
     /// # Example
@@ -282,7 +282,7 @@ impl NaiveTime {
     /// assert_eq!(from_hms_milli(23, 60, 0, 0), Err(Error::InvalidParameter));
     /// assert_eq!(from_hms_milli(23, 59, 60, 0), Err(Error::InvalidParameter));
     /// assert_eq!(from_hms_milli(23, 59, 59, 2_000), Err(Error::InvalidParameter));
-    /// assert_eq!(from_hms_milli(23, 59, 30, 1_999), Err(Error::DoesNotExist));
+    /// assert_eq!(from_hms_milli(23, 59, 30, 1_999), Err(Error::InvalidDate));
     /// ```
     #[inline]
     pub const fn from_hms_milli(
@@ -293,7 +293,7 @@ impl NaiveTime {
     ) -> Result<NaiveTime, Error> {
         let nano = match milli.checked_mul(1_000_000) {
             Some(nano) => nano,
-            None => return Err(INVALID),
+            None => return Err(INVALID_PARAM),
         };
         NaiveTime::from_hms_nano(hour, min, sec, nano)
     }
@@ -307,7 +307,7 @@ impl NaiveTime {
     ///
     /// Returns [`Error::InvalidParameter`] on invalid hour, minute, second and/or microsecond.
     ///
-    /// Returns [`Error::DoesNotExist`] if the microsecond part to represent a leap second is not on
+    /// Returns [`Error::InvalidDate`] if the microsecond part to represent a leap second is not on
     /// a minute boundary.
     ///
     /// # Example
@@ -324,7 +324,7 @@ impl NaiveTime {
     /// assert_eq!(from_hms_micro(23, 60, 0, 0), Err(Error::InvalidParameter));
     /// assert_eq!(from_hms_micro(23, 59, 60, 0), Err(Error::InvalidParameter));
     /// assert_eq!(from_hms_micro(23, 59, 59, 2_000_000), Err(Error::InvalidParameter));
-    /// assert_eq!(from_hms_micro(23, 59, 30, 1_999_999), Err(Error::DoesNotExist));
+    /// assert_eq!(from_hms_micro(23, 59, 30, 1_999_999), Err(Error::InvalidDate));
     /// ```
     #[inline]
     pub const fn from_hms_micro(
@@ -335,7 +335,7 @@ impl NaiveTime {
     ) -> Result<NaiveTime, Error> {
         let nano = match micro.checked_mul(1_000) {
             Some(nano) => nano,
-            None => return Err(INVALID),
+            None => return Err(INVALID_PARAM),
         };
         NaiveTime::from_hms_nano(hour, min, sec, nano)
     }
@@ -349,7 +349,7 @@ impl NaiveTime {
     ///
     /// Returns [`Error::InvalidParameter`] on invalid hour, minute, second and/or nanosecond.
     ///
-    /// Returns [`Error::DoesNotExist`] if the nanosecond part to represent a leap second is not on
+    /// Returns [`Error::InvalidDate`] if the nanosecond part to represent a leap second is not on
     /// a minute boundary.
     ///
     /// # Example
@@ -366,7 +366,7 @@ impl NaiveTime {
     /// assert_eq!(from_hms_nano(23, 60, 0, 0), Err(Error::InvalidParameter));
     /// assert_eq!(from_hms_nano(23, 59, 60, 0), Err(Error::InvalidParameter));
     /// assert_eq!(from_hms_nano(23, 59, 59, 2_000_000_000), Err(Error::InvalidParameter));
-    /// assert_eq!(from_hms_nano(23, 59, 30, 1_999_999_999), Err(Error::DoesNotExist));
+    /// assert_eq!(from_hms_nano(23, 59, 30, 1_999_999_999), Err(Error::InvalidDate));
     /// ```
     #[inline]
     pub const fn from_hms_nano(
@@ -376,9 +376,9 @@ impl NaiveTime {
         nano: u32,
     ) -> Result<NaiveTime, Error> {
         if hour >= 24 || min >= 60 || sec >= 60 || nano >= 2_000_000_000 {
-            return Err(INVALID);
+            return Err(INVALID_PARAM);
         } else if nano >= 1_000_000_000 && sec != 59 {
-            return Err(DOES_NOT_EXIST);
+            return Err(INVALID_DATE);
         }
         let secs = hour * 3600 + min * 60 + sec;
         Ok(NaiveTime { secs, frac: nano })
@@ -393,7 +393,7 @@ impl NaiveTime {
     ///
     /// Returns `[`Error::InvalidParameter`]` on invalid number of seconds and/or nanosecond.
     ///
-    /// Returns [`Error::DoesNotExist`] if the nanosecond part to represent a leap second is not on
+    /// Returns [`Error::InvalidDate`] if the nanosecond part to represent a leap second is not on
     /// a minute boundary.
     ///
     /// # Example
@@ -408,14 +408,14 @@ impl NaiveTime {
     /// assert!(from_nsecs(86399, 1_999_999_999).is_ok()); // a leap second after 23:59:59
     /// assert_eq!(from_nsecs(86_400, 0), Err(Error::InvalidParameter));
     /// assert_eq!(from_nsecs(86399, 2_000_000_000), Err(Error::InvalidParameter));
-    /// assert_eq!(from_nsecs(1, 1_999_999_999), Err(Error::DoesNotExist));
+    /// assert_eq!(from_nsecs(1, 1_999_999_999), Err(Error::InvalidDate));
     /// ```
     #[inline]
     pub const fn from_num_seconds_from_midnight(secs: u32, nano: u32) -> Result<NaiveTime, Error> {
         if secs >= 86_400 || nano >= 2_000_000_000 {
-            return Err(INVALID);
+            return Err(INVALID_PARAM);
         } else if nano >= 1_000_000_000 && secs % 60 != 59 {
-            return Err(DOES_NOT_EXIST);
+            return Err(INVALID_DATE);
         }
         Ok(NaiveTime { secs, frac: nano })
     }

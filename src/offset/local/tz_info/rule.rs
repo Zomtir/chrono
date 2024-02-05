@@ -1033,11 +1033,11 @@ mod tests {
 
         assert!(matches!(
             transition_rule_1.find_local_time_type(min_unix_time),
-            Err(Error::OutOfRange(_))
+            Err(Error::DateOutOfRange(_))
         ));
         assert!(matches!(
             transition_rule_2.find_local_time_type(max_unix_time),
-            Err(Error::OutOfRange(_))
+            Err(Error::DateOutOfRange(_))
         ));
 
         Ok(())
